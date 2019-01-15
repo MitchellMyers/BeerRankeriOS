@@ -18,7 +18,7 @@ class BeerInfoViewController: UIViewController {
         // Do something
         let updatedInfo = beerInfo ?? "Not long enough"
         beerInfoLabel.text = updatedInfo
-        
+//        print(updatedInfo)
     }
     
 }

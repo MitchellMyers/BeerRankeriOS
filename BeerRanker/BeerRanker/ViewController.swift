@@ -17,23 +17,38 @@ class ViewController: UIViewController, AVCapturePhotoCaptureDelegate {
     
     private var textDetectionRequest: VNDetectTextRectanglesRequest?
     private var textObservations = [VNTextObservation]()
+    var recognizedTextPositionTuples = [(rect: CGRect, text: String)]()
     private let session = AVCaptureSession()
+    private var tesseract = G8Tesseract(language: "eng", engineMode: .tesseractOnly)
     
     var captureSession: AVCaptureSession?
     var capturePhotoOutput: AVCapturePhotoOutput?
     var previewLayer: AVCaptureVideoPreviewLayer?
     @objc var captureDevice: AVCaptureDevice?
+    private var font = CTFontCreateWithName("Helvetica" as CFString, 8, nil)
 
     @IBOutlet var preView: UIView!
     @IBOutlet var capture: UIButton!
     
     @IBAction func capture(_ sender: Any) {
-        let photoSettings : AVCapturePhotoSettings!
-        photoSettings = AVCapturePhotoSettings.init(format: [AVVideoCodecKey: AVVideoCodecType.jpeg])
-        photoSettings.isAutoStillImageStabilizationEnabled = true
-        photoSettings.flashMode = .off
-        photoSettings.isHighResolutionPhotoEnabled = false
-        self.capturePhotoOutput?.capturePhoto(with: photoSettings, delegate: self)
+//        let photoSettings : AVCapturePhotoSettings!
+//        photoSettings = AVCapturePhotoSettings.init(format: [AVVideoCodecKey: AVVideoCodecType.jpeg])
+//        photoSettings.isAutoStillImageStabilizationEnabled = true
+//        photoSettings.flashMode = .off
+//        photoSettings.isHighResolutionPhotoEnabled = false
+//
+//        self.capturePhotoOutput?.capturePhoto(with: photoSettings, delegate: self)
+        self.session.stopRunning()
+        var finalString = ""
+        for (_, text) in recognizedTextPositionTuples {
+            finalString.append(text)
+            finalString.append("\n")
+        }
+        print(finalString)
+        let myVC = storyboard?.instantiateViewController(withIdentifier: "BeerInfoViewController") as! BeerInfoViewController
+        myVC.beerInfo = finalString
+        navigationController?.pushViewController(myVC, animated: true)
+        
     }
     
     override func viewDidLoad() {
@@ -58,13 +73,8 @@ class ViewController: UIViewController, AVCapturePhotoCaptureDelegate {
         }
         do {
             let captureDeviceInput = try AVCaptureDeviceInput(device: cameraDevice!)
-            let capturePhotoOutput = AVCapturePhotoOutput()
-            self.session.addOutput(self.capturePhotoOutput!)
             if session.canAddInput(captureDeviceInput) {
                 session.addInput(captureDeviceInput)
-            }
-            if session.canAddOutput(capturePhotoOutput) {
-                session.addOutput(capturePhotoOutput)
             }
         }
         catch {
@@ -152,17 +162,17 @@ class ViewController: UIViewController, AVCapturePhotoCaptureDelegate {
     }
     
     private func handleWithTesseract(image: UIImage) {
-        let scaledImage = image.scaleImage(640)
-        if let tesseract = G8Tesseract(language: "eng") {
-            tesseract.engineMode = .tesseractCubeCombined
-            tesseract.pageSegmentationMode = .auto
-            tesseract.image = scaledImage?.g8_blackAndWhite()
-            tesseract.recognize()
-            
-            let myVC = storyboard?.instantiateViewController(withIdentifier: "BeerInfoViewController") as! BeerInfoViewController
-            myVC.beerInfo = tesseract.recognizedText
-            navigationController?.pushViewController(myVC, animated: true)
-        }
+//        let scaledImage = image.scaleImage(640)
+//        if let tesseract = G8Tesseract(language: "eng") {
+//            tesseract.engineMode = .tesseractCubeCombined
+//            tesseract.pageSegmentationMode = .auto
+//            tesseract.image = scaledImage?.g8_blackAndWhite()
+//            tesseract.recognize()
+//
+//            let myVC = storyboard?.instantiateViewController(withIdentifier: "BeerInfoViewController") as! BeerInfoViewController
+//            myVC.beerInfo = tesseract.recognizedText
+//            navigationController?.pushViewController(myVC, animated: true)
+//        }
     }
     
     
@@ -216,7 +226,7 @@ extension ViewController: AVCaptureVideoDataOutputSampleBufferDelegate {
         let transform = ciImage.orientationTransform(for: CGImagePropertyOrientation(rawValue: 6)!)
         ciImage = ciImage.transformed(by: transform)
         let size = ciImage.extent.size
-        var recognizedTextPositionTuples = [(rect: CGRect, text: String)]()
+        var newTextPositionTuples = [(rect: CGRect, text: String)]()
         for textObservation in textObservations {
             guard let rects = textObservation.characterBoxes else {
                 continue
@@ -238,19 +248,19 @@ extension ViewController: AVCaptureVideoDataOutputSampleBufferDelegate {
                 continue
             }
             let uiImage = UIImage(cgImage: cgImage)
-//            tesseract?.image = uiImage
-//            tesseract?.recognize()
-//            guard var text = tesseract?.recognizedText else {
-//                continue
-//            }
-//            text = text.trimmingCharacters(in: CharacterSet.newlines)
-//            if !text.isEmpty {
-//                let x = xMin
-//                let y = 1 - yMax
-//                let width = xMax - xMin
-//                let height = yMax - yMin
-//                recognizedTextPositionTuples.append((rect: CGRect(x: x, y: y, width: width, height: height), text: text))
-//            }
+            tesseract?.image = uiImage
+            tesseract?.recognize()
+            guard var text = tesseract?.recognizedText else {
+                continue
+            }
+            text = text.trimmingCharacters(in: CharacterSet.newlines)
+            if !text.isEmpty {
+                let x = xMin
+                let y = 1 - yMax
+                let width = xMax - xMin
+                let height = yMax - yMin
+                newTextPositionTuples.append((rect: CGRect(x: x, y: y, width: width, height: height), text: text))
+            }
         }
         textObservations.removeAll()
         DispatchQueue.main.async {
@@ -265,26 +275,27 @@ extension ViewController: AVCaptureVideoDataOutputSampleBufferDelegate {
                     layer.removeFromSuperlayer()
                 }
             }
-//            for tuple in recognizedTextPositionTuples {
-//                let textLayer = CATextLayer()
-//                textLayer.backgroundColor = UIColor.clear.cgColor
-//                textLayer.font = self.font
-//                var rect = tuple.rect
-//
-//                rect.origin.x *= viewWidth
-//                rect.size.width *= viewWidth
-//                rect.origin.y *= viewHeight
-//                rect.size.height *= viewHeight
-//
-//                // Increase the size of text layer to show text of large lengths
-//                rect.size.width += 100
-//                rect.size.height += 100
-//
-//                textLayer.frame = rect
-//                textLayer.string = tuple.text
-//                textLayer.foregroundColor = UIColor.green.cgColor
-//                self.view.layer.addSublayer(textLayer)
-//            }
+            for tuple in newTextPositionTuples {
+                let textLayer = CATextLayer()
+                textLayer.backgroundColor = UIColor.clear.cgColor
+                textLayer.font = self.font
+                var rect = tuple.rect
+
+                rect.origin.x *= viewWidth
+                rect.size.width *= viewWidth
+                rect.origin.y *= viewHeight
+                rect.size.height *= viewHeight
+
+                // Increase the size of text layer to show text of large lengths
+                rect.size.width += 100
+                rect.size.height += 100
+
+                textLayer.frame = rect
+                textLayer.string = tuple.text
+                textLayer.foregroundColor = UIColor.green.cgColor
+                self.view.layer.addSublayer(textLayer)
+            }
+            self.recognizedTextPositionTuples = newTextPositionTuples
         }
     }
 }
