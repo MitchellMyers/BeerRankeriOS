@@ -1,0 +1,6 @@
+framework module Pods_BeerRanker {
+  umbrella header "Pods-BeerRanker-umbrella.h"
+
+  export *
+  module * { export * }
+}
