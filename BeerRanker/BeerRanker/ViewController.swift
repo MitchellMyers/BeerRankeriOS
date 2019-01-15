@@ -17,7 +17,9 @@ class ViewController: UIViewController, AVCapturePhotoCaptureDelegate {
     
     private var textDetectionRequest: VNDetectTextRectanglesRequest?
     private var textObservations = [VNTextObservation]()
-    var recognizedTextPositionTuples = [(rect: CGRect, text: String)]()
+//    var recognizedTextPositionTuples = [(rect: CGRect, text: String)]()
+    var recognizedTextPositionTuples: [CGRect : (String, CGRect)] = [:]
+    var positionToLayerDict : [CGRect : CALayer] = [:]
     private let session = AVCaptureSession()
     private var tesseract = G8Tesseract(language: "eng", engineMode: .tesseractOnly)
     
@@ -40,11 +42,11 @@ class ViewController: UIViewController, AVCapturePhotoCaptureDelegate {
 //        self.capturePhotoOutput?.capturePhoto(with: photoSettings, delegate: self)
         self.session.stopRunning()
         var finalString = ""
-        for (_, text) in recognizedTextPositionTuples {
+        for (_, (text, _)) in recognizedTextPositionTuples {
             finalString.append(text)
             finalString.append("\n")
         }
-        print(finalString)
+//        print(finalString)
         let myVC = storyboard?.instantiateViewController(withIdentifier: "BeerInfoViewController") as! BeerInfoViewController
         myVC.beerInfo = finalString
         navigationController?.pushViewController(myVC, animated: true)
@@ -140,6 +142,8 @@ class ViewController: UIViewController, AVCapturePhotoCaptureDelegate {
                     layer.borderWidth = 2
                     layer.borderColor = UIColor.red.cgColor
                     self.preView.layer.addSublayer(layer)
+                    
+                    self.positionToLayerDict[textResult.boundingBox] = layer
                 }
             }
         }
@@ -226,11 +230,14 @@ extension ViewController: AVCaptureVideoDataOutputSampleBufferDelegate {
         let transform = ciImage.orientationTransform(for: CGImagePropertyOrientation(rawValue: 6)!)
         ciImage = ciImage.transformed(by: transform)
         let size = ciImage.extent.size
-        var newTextPositionTuples = [(rect: CGRect, text: String)]()
+        
+        var newTextPositionTuples: [CGRect : (String, CGRect)] = [:]
         for textObservation in textObservations {
+            
             guard let rects = textObservation.characterBoxes else {
                 continue
             }
+            
             var xMin = CGFloat.greatestFiniteMagnitude
             var xMax: CGFloat = 0
             var yMin = CGFloat.greatestFiniteMagnitude
@@ -259,7 +266,8 @@ extension ViewController: AVCaptureVideoDataOutputSampleBufferDelegate {
                 let y = 1 - yMax
                 let width = xMax - xMin
                 let height = yMax - yMin
-                newTextPositionTuples.append((rect: CGRect(x: x, y: y, width: width, height: height), text: text))
+                newTextPositionTuples[CGRect(x: x, y: y, width: width, height: height)] = (text, textObservation.boundingBox)
+//                newTextPositionTuples.append((rect: CGRect(x: x, y: y, width: width, height: height), text: text))
             }
         }
         textObservations.removeAll()
@@ -275,11 +283,11 @@ extension ViewController: AVCaptureVideoDataOutputSampleBufferDelegate {
                     layer.removeFromSuperlayer()
                 }
             }
-            for tuple in newTextPositionTuples {
+            for (tupRect, (tupText, _)) in newTextPositionTuples {
                 let textLayer = CATextLayer()
                 textLayer.backgroundColor = UIColor.clear.cgColor
                 textLayer.font = self.font
-                var rect = tuple.rect
+                var rect = tupRect
 
                 rect.origin.x *= viewWidth
                 rect.size.width *= viewWidth
@@ -291,12 +299,18 @@ extension ViewController: AVCaptureVideoDataOutputSampleBufferDelegate {
                 rect.size.height += 100
 
                 textLayer.frame = rect
-                textLayer.string = tuple.text
+                textLayer.string = tupText
                 textLayer.foregroundColor = UIColor.green.cgColor
                 self.view.layer.addSublayer(textLayer)
             }
             self.recognizedTextPositionTuples = newTextPositionTuples
         }
+    }
+}
+
+extension CGRect: Hashable {
+    public var hashValue: Int {
+        return NSCoder.string(for: self).hashValue
     }
 }
 
