@@ -38,14 +38,36 @@
                                 <rect key="frame" x="0.0" y="92" width="375" height="720"/>
                                 <autoresizingMask key="autoresizingMask" flexibleMinX="YES" flexibleMaxX="YES" flexibleMaxY="YES"/>
                                 <color key="backgroundColor" white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
+                                <gestureRecognizers/>
+                                <connections>
+                                    <outletCollection property="gestureRecognizers" destination="BXa-zH-tak" appends="YES" id="AHX-at-sQJ"/>
+                                </connections>
                             </view>
                             <button opaque="NO" contentMode="scaleToFill" fixedFrame="YES" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="g6v-1d-xje">
-                                <rect key="frame" x="134" y="700" width="107" height="45"/>
+                                <rect key="frame" x="40" y="700" width="107" height="45"/>
                                 <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
                                 <color key="backgroundColor" red="1" green="0.5" blue="0.0" alpha="1" colorSpace="calibratedRGB"/>
                                 <state key="normal" title="Capture"/>
                                 <connections>
                                     <action selector="capture:" destination="BYZ-38-t0r" eventType="touchUpInside" id="hGQ-a3-2KZ"/>
+                                </connections>
+                            </button>
+                            <button opaque="NO" contentMode="scaleToFill" fixedFrame="YES" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="cPN-8o-7zH">
+                                <rect key="frame" x="233" y="700" width="107" height="45"/>
+                                <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                                <color key="backgroundColor" red="1" green="0.5" blue="0.0" alpha="1" colorSpace="calibratedRGB"/>
+                                <state key="normal" title="Check Beers"/>
+                                <connections>
+                                    <action selector="checkBeers:" destination="BYZ-38-t0r" eventType="touchUpInside" id="Nyo-n1-6tz"/>
+                                </connections>
+                            </button>
+                            <button opaque="NO" contentMode="scaleToFill" fixedFrame="YES" contentHorizontalAlignment="center" contentVerticalAlignment="center" buttonType="roundedRect" lineBreakMode="middleTruncation" translatesAutoresizingMaskIntoConstraints="NO" id="nDV-p4-BEe">
+                                <rect key="frame" x="133" y="391" width="108" height="30"/>
+                                <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                                <color key="backgroundColor" red="1" green="0.14913141730000001" blue="0.0" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
+                                <state key="normal" title="TEST SCRAPER"/>
+                                <connections>
+                                    <action selector="testWebscraper:" destination="BYZ-38-t0r" eventType="touchUpInside" id="Xzs-dy-C5g"/>
                                 </connections>
                             </button>
                         </subviews>
@@ -55,10 +77,16 @@
                     <navigationItem key="navigationItem" id="MYS-1K-UYm"/>
                     <connections>
                         <outlet property="capture" destination="g6v-1d-xje" id="qDF-Yz-Dxs"/>
+                        <outlet property="checkBeerButton" destination="cPN-8o-7zH" id="1la-aw-2LG"/>
                         <outlet property="preView" destination="dqy-Rr-OSl" id="lE5-0x-isL"/>
                     </connections>
                 </viewController>
                 <placeholder placeholderIdentifier="IBFirstResponder" id="dkx-z0-nzr" sceneMemberID="firstResponder"/>
+                <panGestureRecognizer minimumNumberOfTouches="1" id="BXa-zH-tak">
+                    <connections>
+                        <action selector="selectBlocksOfText:" destination="BYZ-38-t0r" id="71Z-rm-20F"/>
+                    </connections>
+                </panGestureRecognizer>
             </objects>
             <point key="canvasLocation" x="128.80000000000001" y="124.13793103448276"/>
         </scene>
@@ -88,6 +116,43 @@
                 <placeholder placeholderIdentifier="IBFirstResponder" id="XAb-iQ-smf" userLabel="First Responder" sceneMemberID="firstResponder"/>
             </objects>
             <point key="canvasLocation" x="916" y="125"/>
+        </scene>
+        <!--Beer Info Table View Controller-->
+        <scene sceneID="YSf-NX-mQB">
+            <objects>
+                <tableViewController storyboardIdentifier="BeerInfoTableViewController" id="jbA-G0-8Q5" customClass="BeerInfoTableViewController" customModule="BeerRanker" customModuleProvider="target" sceneMemberID="viewController">
+                    <tableView key="view" clipsSubviews="YES" contentMode="scaleToFill" alwaysBounceVertical="YES" dataMode="prototypes" style="plain" separatorStyle="default" rowHeight="-1" estimatedRowHeight="-1" sectionHeaderHeight="28" sectionFooterHeight="28" id="m1I-xT-FDz">
+                        <rect key="frame" x="0.0" y="0.0" width="375" height="812"/>
+                        <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
+                        <color key="backgroundColor" white="1" alpha="1" colorSpace="custom" customColorSpace="genericGamma22GrayColorSpace"/>
+                        <prototypes>
+                            <tableViewCell clipsSubviews="YES" contentMode="scaleToFill" preservesSuperviewLayoutMargins="YES" selectionStyle="default" indentationWidth="10" reuseIdentifier="beerInfoCell" id="GR1-81-BeX">
+                                <rect key="frame" x="0.0" y="28" width="375" height="44"/>
+                                <autoresizingMask key="autoresizingMask"/>
+                                <tableViewCellContentView key="contentView" opaque="NO" clipsSubviews="YES" multipleTouchEnabled="YES" contentMode="center" preservesSuperviewLayoutMargins="YES" insetsLayoutMarginsFromSafeArea="NO" tableViewCell="GR1-81-BeX" id="8Cm-Mu-DOH">
+                                    <rect key="frame" x="0.0" y="0.0" width="375" height="43.666666666666664"/>
+                                    <autoresizingMask key="autoresizingMask"/>
+                                    <subviews>
+                                        <label opaque="NO" userInteractionEnabled="NO" contentMode="left" horizontalHuggingPriority="251" verticalHuggingPriority="251" fixedFrame="YES" text="Label" textAlignment="natural" lineBreakMode="tailTruncation" baselineAdjustment="alignBaselines" adjustsFontSizeToFit="NO" translatesAutoresizingMaskIntoConstraints="NO" id="G33-Az-6iH">
+                                            <rect key="frame" x="166" y="11" width="42" height="21"/>
+                                            <autoresizingMask key="autoresizingMask" flexibleMaxX="YES" flexibleMaxY="YES"/>
+                                            <fontDescription key="fontDescription" type="system" pointSize="17"/>
+                                            <nil key="textColor"/>
+                                            <nil key="highlightedColor"/>
+                                        </label>
+                                    </subviews>
+                                </tableViewCellContentView>
+                            </tableViewCell>
+                        </prototypes>
+                        <connections>
+                            <outlet property="dataSource" destination="jbA-G0-8Q5" id="CWq-OA-ZHf"/>
+                            <outlet property="delegate" destination="jbA-G0-8Q5" id="c4Z-Sj-Di0"/>
+                        </connections>
+                    </tableView>
+                </tableViewController>
+                <placeholder placeholderIdentifier="IBFirstResponder" id="HFM-Vk-7vd" userLabel="First Responder" sceneMemberID="firstResponder"/>
+            </objects>
+            <point key="canvasLocation" x="1902" y="125"/>
         </scene>
     </scenes>
 </document>

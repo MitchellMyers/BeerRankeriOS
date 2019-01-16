@@ -12,12 +12,11 @@ import Photos
 import TesseractOCR
 import Vision
 
-
 class ViewController: UIViewController, AVCapturePhotoCaptureDelegate {
     
     private var textDetectionRequest: VNDetectTextRectanglesRequest?
     private var textObservations = [VNTextObservation]()
-//    var recognizedTextPositionTuples = [(rect: CGRect, text: String)]()
+    private var beerTitles = [String]()
     var recognizedTextPositionTuples: [CGRect : (String, CGRect)] = [:]
     var positionToLayerDict : [CGRect : CALayer] = [:]
     private let session = AVCaptureSession()
@@ -31,32 +30,31 @@ class ViewController: UIViewController, AVCapturePhotoCaptureDelegate {
 
     @IBOutlet var preView: UIView!
     @IBOutlet var capture: UIButton!
+    @IBOutlet weak var checkBeerButton: UIButton!
     
     @IBAction func capture(_ sender: Any) {
-//        let photoSettings : AVCapturePhotoSettings!
-//        photoSettings = AVCapturePhotoSettings.init(format: [AVVideoCodecKey: AVVideoCodecType.jpeg])
-//        photoSettings.isAutoStillImageStabilizationEnabled = true
-//        photoSettings.flashMode = .off
-//        photoSettings.isHighResolutionPhotoEnabled = false
-//
-//        self.capturePhotoOutput?.capturePhoto(with: photoSettings, delegate: self)
         self.session.stopRunning()
-        var finalString = ""
-        for (_, (text, _)) in recognizedTextPositionTuples {
-            finalString.append(text)
-            finalString.append("\n")
-        }
-//        print(finalString)
-        let myVC = storyboard?.instantiateViewController(withIdentifier: "BeerInfoViewController") as! BeerInfoViewController
-        myVC.beerInfo = finalString
-        navigationController?.pushViewController(myVC, animated: true)
-        
+        checkBeerButton.isEnabled = true
     }
+    
+    @IBAction func testWebscraper(_ sender: Any) {
+        let ws = WebScrapingService()
+//        ws.scrapeGoogleSearch(beerPhraseToSearch: "Stone Scorpion Bowl IPA df 65%") { response in
+//            if let beerAdvUrl = response {
+//                ws.scrapeBeerAdvocate(beerAdvUrl: beerAdvUrl) { response in
+//                    print(response)
+//                }
+//            }
+//        }
+    }
+    
+    
     
     override func viewDidLoad() {
         super.viewDidLoad()
         // Do any additional setup after loading the view, typically from a nib.
-        
+        checkBeerButton.isEnabled = false
+        tesseract?.pageSegmentationMode = .auto
         self.configureTextDetection()
         self.configureCamera()
         
@@ -150,41 +148,76 @@ class ViewController: UIViewController, AVCapturePhotoCaptureDelegate {
     }
     
     
-    
-    func photoOutput(_ output: AVCapturePhotoOutput,
-                              didFinishProcessingPhoto photo: AVCapturePhoto,
-                              error: Error?) {
-        guard let imageData = photo.fileDataRepresentation() else {
-            print("Error while generating image from photo capture data.")
-            return
-        }
-        // Initialise a UIImage with our image data
-        let capturedImage = UIImage.init(data: imageData, scale: 7.5)
-//        let imageView = UIImageView(image: capturedImage!)
-//        self.preView.addSubview(imageView)
-        handleWithTesseract(image: capturedImage!)
-    }
-    
-    private func handleWithTesseract(image: UIImage) {
-//        let scaledImage = image.scaleImage(640)
-//        if let tesseract = G8Tesseract(language: "eng") {
-//            tesseract.engineMode = .tesseractCubeCombined
-//            tesseract.pageSegmentationMode = .auto
-//            tesseract.image = scaledImage?.g8_blackAndWhite()
-//            tesseract.recognize()
-//
-//            let myVC = storyboard?.instantiateViewController(withIdentifier: "BeerInfoViewController") as! BeerInfoViewController
-//            myVC.beerInfo = tesseract.recognizedText
-//            navigationController?.pushViewController(myVC, animated: true)
+    @IBAction func checkBeers(_ sender: Any) {
+//        var finalString = ""
+//        for text in beerTitles {
+//            finalString.append(text)
+//            finalString.append("\n")
 //        }
+        self.findBeerRatings() { response in
+            let myVC = self.storyboard?.instantiateViewController(withIdentifier: "BeerInfoTableViewController") as! BeerInfoTableViewController
+            myVC.allBeerInfoTupples = response
+            self.navigationController?.pushViewController(myVC, animated: true)
+        }
+        
+        
     }
     
+    private func findBeerRatings(completion: @escaping ([(String?, String?, String?)]) -> Void) {
+        var beerInfoTupples = [(String?, String?, String?)]()
+        for beerTitle in self.beerTitles {
+            self.findBeerRating(beerTitle: beerTitle) { response in
+                beerInfoTupples.append(response)
+                completion(beerInfoTupples)
+            }
+        }
+    }
     
+    private func findBeerRating(beerTitle: String, completion: @escaping ((String?, String?, String?)) -> Void) {
+        let ws : WebScrapingService = WebScrapingService()
+        ws.scrapeGoogleSearch(beerPhraseToSearch: beerTitle) { response in
+            if let beerAdvUrl = response {
+                ws.scrapeBeerAdvocate(beerAdvUrl: beerAdvUrl) { beerInfo in
+                    //                        print(response)
+                    completion(beerInfo)
+                }
+            }
+        }
+    }
     
-
-
-
+    @IBAction func selectBlocksOfText(_ sender: UIPanGestureRecognizer) {
+        sender.maximumNumberOfTouches = 1
+        var location : CGPoint
+        if sender.state == .began {
+            location = sender.location(in: self.preView!)
+            self.checkTapWithBoundBoxes(touch: location)
+        }
+        
+        if sender.state != .cancelled {
+            location = sender.location(in: preView!)
+            self.checkTapWithBoundBoxes(touch: location)
+        }
+        
+    }
+    
+    private func checkTapWithBoundBoxes(touch: CGPoint) {
+        let scaledLoc = CGPoint(x: 1 - (touch.x / self.preView.frame.size.width), y: 1 - (touch.y / self.preView.frame.size.height))
+        for (_, (text, boundBox)) in self.recognizedTextPositionTuples {
+            if (boundBox.contains(scaledLoc)) {
+                let corrLayer = self.positionToLayerDict[boundBox]
+                corrLayer?.borderColor = UIColor.blue.cgColor
+                if (!beerTitles.contains(text)) {
+                    beerTitles.append(text)
+                }
+            }
+        }
+    }
+    
 }
+
+
+
+
 
 extension UIImage {
     func scaleImage(_ maxDimension: CGFloat) -> UIImage? {
@@ -249,7 +282,7 @@ extension ViewController: AVCaptureVideoDataOutputSampleBufferDelegate {
                 yMin = min(yMin, rect.bottomRight.y)
                 yMax = max(yMax, rect.topRight.y)
             }
-            let imageRect = CGRect(x: xMin * size.width, y: yMin * size.height, width: (xMax - xMin) * size.width, height: (yMax - yMin) * size.height)
+            let imageRect = CGRect(x: (xMin * size.width) - 5, y: (yMin * size.height) - 5, width: ((xMax - xMin) * size.width) + 10, height: ((yMax - yMin) * size.height) + 10)
             let context = CIContext(options: nil)
             guard let cgImage = context.createCGImage(ciImage, from: imageRect) else {
                 continue
@@ -301,7 +334,7 @@ extension ViewController: AVCaptureVideoDataOutputSampleBufferDelegate {
                 textLayer.frame = rect
                 textLayer.string = tupText
                 textLayer.foregroundColor = UIColor.green.cgColor
-                self.view.layer.addSublayer(textLayer)
+//                self.view.layer.addSublayer(textLayer)
             }
             self.recognizedTextPositionTuples = newTextPositionTuples
         }

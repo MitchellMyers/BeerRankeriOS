@@ -12,13 +12,26 @@ class BeerInfoViewController: UIViewController {
     
     
     @IBOutlet weak var beerInfoLabel: UILabel!
-    var beerInfo: String?
+    var beersToSearch : [String] = []
+    var webScrapingService : WebScrapingService = WebScrapingService()
     
     override func viewDidLoad() {
         // Do something
-        let updatedInfo = beerInfo ?? "Not long enough"
-        beerInfoLabel.text = updatedInfo
-//        print(updatedInfo)
+        findBeerRatings()
+    }
+    
+    private func findBeerRatings() {
+        for beerTitle in beersToSearch {
+            
+            self.webScrapingService.scrapeGoogleSearch(beerPhraseToSearch: beerTitle) { response in
+                if let beerAdvUrl = response {
+                    self.webScrapingService.scrapeBeerAdvocate(beerAdvUrl: beerAdvUrl) { response in
+                        print(beerTitle)
+                        print(response)
+                    }
+                }
+            }
+        }
     }
     
 }

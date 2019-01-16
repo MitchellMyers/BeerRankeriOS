@@ -8,6 +8,8 @@
 
 /* Begin PBXBuildFile section */
 		30B2DCE621EDC63E00D1F80D /* Preview.swift in Sources */ = {isa = PBXBuildFile; fileRef = 30B2DCE521EDC63E00D1F80D /* Preview.swift */; };
+		30B2DCE821EE779000D1F80D /* WebScrapingService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 30B2DCE721EE779000D1F80D /* WebScrapingService.swift */; };
+		30B2DCEA21EEA1E900D1F80D /* BeerInfoTableViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 30B2DCE921EEA1E900D1F80D /* BeerInfoTableViewController.swift */; };
 		30E5372021ED4D7900E0D31C /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 30E5371F21ED4D7900E0D31C /* AppDelegate.swift */; };
 		30E5372221ED4D7900E0D31C /* ViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 30E5372121ED4D7900E0D31C /* ViewController.swift */; };
 		30E5372521ED4D7900E0D31C /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 30E5372321ED4D7900E0D31C /* Main.storyboard */; };
@@ -22,6 +24,8 @@
 
 /* Begin PBXFileReference section */
 		30B2DCE521EDC63E00D1F80D /* Preview.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Preview.swift; sourceTree = "<group>"; };
+		30B2DCE721EE779000D1F80D /* WebScrapingService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebScrapingService.swift; sourceTree = "<group>"; };
+		30B2DCE921EEA1E900D1F80D /* BeerInfoTableViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BeerInfoTableViewController.swift; sourceTree = "<group>"; };
 		30E5371C21ED4D7900E0D31C /* BeerRanker.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = BeerRanker.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		30E5371F21ED4D7900E0D31C /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		30E5372121ED4D7900E0D31C /* ViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ViewController.swift; sourceTree = "<group>"; };
@@ -82,6 +86,8 @@
 				30E5372B21ED4D7900E0D31C /* Info.plist */,
 				30E5373821ED84A100E0D31C /* BeerInfoViewController.swift */,
 				30B2DCE521EDC63E00D1F80D /* Preview.swift */,
+				30B2DCE721EE779000D1F80D /* WebScrapingService.swift */,
+				30B2DCE921EEA1E900D1F80D /* BeerInfoTableViewController.swift */,
 			);
 			path = BeerRanker;
 			sourceTree = "<group>";
@@ -182,10 +188,14 @@
 			);
 			inputPaths = (
 				"${SRCROOT}/Pods/Target Support Files/Pods-BeerRanker/Pods-BeerRanker-frameworks.sh",
+				"${BUILT_PRODUCTS_DIR}/Alamofire/Alamofire.framework",
+				"${BUILT_PRODUCTS_DIR}/Kanna/Kanna.framework",
 				"${BUILT_PRODUCTS_DIR}/TesseractOCRiOS/TesseractOCR.framework",
 			);
 			name = "[CP] Embed Pods Frameworks";
 			outputPaths = (
+				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/Alamofire.framework",
+				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/Kanna.framework",
 				"${TARGET_BUILD_DIR}/${FRAMEWORKS_FOLDER_PATH}/TesseractOCR.framework",
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -219,7 +229,9 @@
 			buildActionMask = 2147483647;
 			files = (
 				30E5373921ED84A100E0D31C /* BeerInfoViewController.swift in Sources */,
+				30B2DCE821EE779000D1F80D /* WebScrapingService.swift in Sources */,
 				30E5372221ED4D7900E0D31C /* ViewController.swift in Sources */,
+				30B2DCEA21EEA1E900D1F80D /* BeerInfoTableViewController.swift in Sources */,
 				30B2DCE621EDC63E00D1F80D /* Preview.swift in Sources */,
 				30E5372021ED4D7900E0D31C /* AppDelegate.swift in Sources */,
 			);

@@ -1,16 +1,24 @@
 PODS:
+  - Alamofire (5.0.0.beta.1)
+  - Kanna (4.0.0)
   - TesseractOCRiOS (4.0.0)
 
 DEPENDENCIES:
+  - Alamofire (~> 5.0.0.beta.1)
+  - Kanna (~> 4.0.0)
   - TesseractOCRiOS
 
 SPEC REPOS:
   https://github.com/cocoapods/specs.git:
+    - Alamofire
+    - Kanna
     - TesseractOCRiOS
 
 SPEC CHECKSUMS:
+  Alamofire: 2ef6d6c984c5d21c366e9b41a9ae7dfee2b67a44
+  Kanna: d5ae2a26472f7e7a474e7f36a9cd8aa2c8c63ad3
   TesseractOCRiOS: 90638afbe43d082433f2e76b384c7901d23956df
 
-PODFILE CHECKSUM: 78af5e83ae1c5745abf026bf7c2441a2787d0195
+PODFILE CHECKSUM: f37f7fec839581b75cdde7306fd1275dba2efc40
 
 COCOAPODS: 1.5.3

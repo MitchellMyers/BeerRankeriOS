@@ -6,4 +6,6 @@ target 'BeerRanker' do
   use_frameworks!
   # Pods for BeerRanker
   pod 'TesseractOCRiOS'
+  pod 'Kanna', '~> 4.0.0'
+  pod 'Alamofire', '~> 5.0.0.beta.1'
 end
