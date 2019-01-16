@@ -2110,6 +2110,7 @@
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = E0B602FA956BA3B06FE9E820936D9C21 /* TesseractOCRiOS.xcconfig */;
 			buildSettings = {
+				CLANG_WARN_DOCUMENTATION_COMMENTS = NO;
 				CODE_SIGN_IDENTITY = "";
 				"CODE_SIGN_IDENTITY[sdk=appletvos*]" = "";
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "";
@@ -2345,6 +2346,7 @@
 			isa = XCBuildConfiguration;
 			baseConfigurationReference = E0B602FA956BA3B06FE9E820936D9C21 /* TesseractOCRiOS.xcconfig */;
 			buildSettings = {
+				CLANG_WARN_DOCUMENTATION_COMMENTS = NO;
 				CODE_SIGN_IDENTITY = "";
 				"CODE_SIGN_IDENTITY[sdk=appletvos*]" = "";
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "";

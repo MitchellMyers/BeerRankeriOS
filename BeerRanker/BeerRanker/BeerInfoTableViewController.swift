@@ -11,23 +11,16 @@ import UIKit
 
 class BeerInfoTableViewController: UITableViewController {
     
-    var beersToSearch : [String] = []
-    var webScrapingService : WebScrapingService = WebScrapingService()
-    var allBeerInfoTupples = [(String?, String?, String?)]()
+    var allBeerStats = [BeerStats]()
     
     
-//    override func viewWillAppear(_ animated: Bool) {
-//        super.viewWillAppear(animated)
-//        self.findBeerRatings() { response in
-//                        self.allBeerInfoTupples = response
-//        }
-//    }
     override func viewDidLoad() {
         super.viewDidLoad()
-//        self.findBeerRatings() { response in
-//            self.allBeerInfoTupples = response
-//        }
-        
+        self.allBeerStats = allBeerStats.sorted(by: {
+            let rateOne = $0.rating ?? "0.0"
+            let rateTwo = $1.rating ?? "0.0"
+            return rateOne.floatValue > rateTwo.floatValue
+        })
     }
     
     override func numberOfSections(in tableView: UITableView) -> Int {
@@ -35,31 +28,20 @@ class BeerInfoTableViewController: UITableViewController {
     }
     
     override func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        print(self.allBeerInfoTupples.count)
-        return self.allBeerInfoTupples.count
+        return self.allBeerStats.count
     }
     
     override func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         let cell = tableView.dequeueReusableCell(withIdentifier: "beerInfoCell", for: indexPath)
-        
-        cell.textLabel?.text = self.allBeerInfoTupples[indexPath.row].0
+        let beerStats = self.allBeerStats[indexPath.row]
+        let beerRating = beerStats.rating ?? "N/A"
+        let beerNumRatings = beerStats.numRatings ?? "N/A"
+        let beerAbv = beerStats.abv ?? "N/A"
+        let beerDetailString = "Rating: " + beerRating + " | Number of Ratings: " + beerNumRatings + " | ABV: " + beerAbv
+        cell.textLabel?.text = beerStats.beerName
+        cell.detailTextLabel?.text = beerDetailString
         
         return cell
     }
-    
-//    private func findBeerRatings(completion: @escaping ([(String?, String?, String?)]) -> Void) {
-//        var beerInfoTupples = [(String?, String?, String?)]()
-//        for beerTitle in beersToSearch {
-//            self.webScrapingService.scrapeGoogleSearch(beerPhraseToSearch: beerTitle) { response in
-//                if let beerAdvUrl = response {
-//                    self.webScrapingService.scrapeBeerAdvocate(beerAdvUrl: beerAdvUrl) { response in
-//                        print(response)
-//                        beerInfoTupples.append(response)
-//                    }
-//                }
-//            }
-//        }
-//        completion(beerInfoTupples)
-//    }
     
 }

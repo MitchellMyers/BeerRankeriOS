@@ -17,43 +17,52 @@ class WebScrapingService {
         queryString = queryString.replacingOccurrences(of: " ", with: "+")
         queryString = queryString.replacingOccurrences(of: "%", with: "%25")
         let googleSearchUrl = "https://www.google.com/search?q=" + queryString + "&oq=" + queryString
+        print("Here 1")
         AF.request(googleSearchUrl).responseString { response in
+            print("Here 2")
             if let html = response.result.value {
+                print("Here 3")
                 let beerAdvUrl = self.pullBeerAdvPageFromSearch(html: html, htmlKey: "https://www.beeradvocate.com/beer/")
                 completion(beerAdvUrl)
             }
         }
     }
     
-    func scrapeBeerAdvocate(beerAdvUrl: String, completion: @escaping ((String?, String?, String?)) -> Void) {
+    func scrapeBeerAdvocate(beerAdvUrl: String, completion: @escaping (BeerStats) -> Void) {
+        var beerName : String?
         var beerRating : String?
         var numBeerReviews : String?
         var beerAbv : String?
+        print("Here 5")
         AF.request(beerAdvUrl).responseString { response in
+            print("Here 6")
             if let html = response.result.value {
-                beerRating = self.pullBeerInfo(html: html, htmlKey: "ba-ravg\">")
-                numBeerReviews = self.pullBeerInfo(html: html, htmlKey: "ba-ratings\">")
-                if let beerAbvOp = self.pullBeerInfo(html: html, htmlKey: "(ABV):</b>") {
+                print("Here 7")
+                beerName = self.scrapeInfo(html: html, htmlKey: "<title>", htmlStopKey: " | Beer")
+                beerRating = self.scrapeInfo(html: html, htmlKey: "ba-ravg\">", htmlStopKey: "<")
+                numBeerReviews = self.scrapeInfo(html: html, htmlKey: "ba-ratings\">", htmlStopKey: "<")
+                if let beerAbvOp = self.scrapeInfo(html: html, htmlKey: "(ABV):</b>", htmlStopKey: "<") {
                     beerAbv = beerAbvOp.trimmingCharacters(in: CharacterSet.init(charactersIn: " \n"))
                 }
-                completion((beerRating, numBeerReviews, beerAbv))
+                completion(BeerStats(beerName: beerName, rating: beerRating, numRatings: numBeerReviews, abv: beerAbv))
             }
         }
     }
     
-    private func pullBeerInfo(html: String, htmlKey: String) -> String? {
+    private func scrapeInfo(html: String, htmlKey: String, htmlStopKey: String) -> String? {
         if let index = html.endIndex(of: htmlKey) {
             let substring = html[index...]
             let stringUncut = String(substring)
-            if let endIndex = stringUncut.firstIndex(of: "<") {
-                let rating = stringUncut[..<endIndex]
-                return String(rating)
+            if let endIndex = stringUncut.index(of: htmlStopKey) {
+                let scrappedInfo = stringUncut[..<endIndex]
+                return String(scrappedInfo)
             }
         }
         return nil
     }
     
     private func pullBeerAdvPageFromSearch(html: String, htmlKey: String) -> String? {
+        print("Here 4")
         if let index = html.index(of: htmlKey) {
             let substring = html[index...]
             let stringUncut = String(substring)

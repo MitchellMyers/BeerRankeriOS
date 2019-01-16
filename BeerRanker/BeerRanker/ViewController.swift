@@ -20,44 +20,126 @@ class ViewController: UIViewController, AVCapturePhotoCaptureDelegate {
     var recognizedTextPositionTuples: [CGRect : (String, CGRect)] = [:]
     var positionToLayerDict : [CGRect : CALayer] = [:]
     private let session = AVCaptureSession()
-    private var tesseract = G8Tesseract(language: "eng", engineMode: .tesseractOnly)
+    private var tesseract = G8Tesseract(language: "eng+deu+fr", engineMode: .tesseractOnly)
     
     var captureSession: AVCaptureSession?
     var capturePhotoOutput: AVCapturePhotoOutput?
     var previewLayer: AVCaptureVideoPreviewLayer?
     @objc var captureDevice: AVCaptureDevice?
-    private var font = CTFontCreateWithName("Helvetica" as CFString, 8, nil)
 
     @IBOutlet var preView: UIView!
     @IBOutlet var capture: UIButton!
     @IBOutlet weak var checkBeerButton: UIButton!
-    
-    @IBAction func capture(_ sender: Any) {
-        self.session.stopRunning()
-        checkBeerButton.isEnabled = true
-    }
-    
-    @IBAction func testWebscraper(_ sender: Any) {
-        let ws = WebScrapingService()
-//        ws.scrapeGoogleSearch(beerPhraseToSearch: "Stone Scorpion Bowl IPA df 65%") { response in
-//            if let beerAdvUrl = response {
-//                ws.scrapeBeerAdvocate(beerAdvUrl: beerAdvUrl) { response in
-//                    print(response)
-//                }
-//            }
-//        }
-    }
-    
+    @IBOutlet weak var refreshButton: UIButton!
+    @IBOutlet weak var activityMonitor: UIActivityIndicatorView!
     
     
     override func viewDidLoad() {
         super.viewDidLoad()
         // Do any additional setup after loading the view, typically from a nib.
         checkBeerButton.isEnabled = false
+        refreshButton.isEnabled = false
         tesseract?.pageSegmentationMode = .auto
         self.configureTextDetection()
         self.configureCamera()
+        self.activityMonitor.isHidden = true
+    }
+    
+    @IBAction func capture(_ sender: Any) {
+        self.session.stopRunning()
+        checkBeerButton.isEnabled = true
+        refreshButton.isEnabled = true
         
+    }
+    
+    
+    @IBAction func refreshScreen(_ sender: Any) {
+        self.session.startRunning()
+        self.recognizedTextPositionTuples.removeAll()
+        self.beerTitles.removeAll()
+        self.positionToLayerDict.removeAll()
+    }
+    
+    
+    
+    @IBAction func checkBeers(_ sender: Any) {
+        self.activityMonitor.isHidden = false
+        activityMonitor.startAnimating()
+        checkBeerButton.isEnabled = false
+        self.findBeerRatings()
+    }
+    
+
+    
+    @IBAction func selectBlocksOfText(_ sender: UIPanGestureRecognizer) {
+        sender.maximumNumberOfTouches = 1
+        var location : CGPoint
+        if sender.state == .began {
+            location = sender.location(in: self.preView!)
+            self.checkTapWithBoundBoxes(touch: location)
+        }
+        
+        if sender.state != .cancelled {
+            location = sender.location(in: preView!)
+            self.checkTapWithBoundBoxes(touch: location)
+        }
+    }
+    
+    
+    @IBAction func selectBlockOfText(_ sender: UITapGestureRecognizer) {
+        var location : CGPoint
+        if sender.state == .began {
+            location = sender.location(in: self.preView!)
+            self.checkTapWithBoundBoxes(touch: location)
+        }
+    }
+    
+    private func checkTapWithBoundBoxes(touch: CGPoint) {
+        let scaledLoc = CGPoint(x: 1 - (touch.x / self.preView.frame.size.width), y: 1 - (touch.y / self.preView.frame.size.height))
+        for (_, (text, boundBox)) in self.recognizedTextPositionTuples {
+            if (boundBox.contains(scaledLoc)) {
+                let corrLayer = self.positionToLayerDict[boundBox]
+                corrLayer?.borderColor = UIColor.blue.cgColor
+                if (!beerTitles.contains(text)) {
+                    beerTitles.append(text)
+                }
+            }
+        }
+    }
+    
+    
+    
+    
+    private func findBeerRatings() {
+        var beerInfoTupples = [BeerStats]()
+        let wsDispatchGroup = DispatchGroup()
+        print(beerTitles)
+        for beerTitle in self.beerTitles {
+            wsDispatchGroup.enter()
+            self.findBeerRating(beerTitle: beerTitle) { response in
+                print(response.beerName ?? "N/A")
+                beerInfoTupples.append(response)
+                wsDispatchGroup.leave()
+            }
+        }
+        wsDispatchGroup.notify(queue: .main) {
+            self.activityMonitor.stopAnimating()
+            self.activityMonitor.isHidden = true
+            let myVC = self.storyboard?.instantiateViewController(withIdentifier: "BeerInfoTableViewController") as! BeerInfoTableViewController
+            myVC.allBeerStats = beerInfoTupples
+            self.navigationController?.pushViewController(myVC, animated: true)
+        }
+    }
+    
+    private func findBeerRating(beerTitle: String, completion: @escaping (BeerStats) -> Void) {
+        let ws : WebScrapingService = WebScrapingService()
+        ws.scrapeGoogleSearch(beerPhraseToSearch: beerTitle) { response in
+            if let beerAdvUrl = response {
+                ws.scrapeBeerAdvocate(beerAdvUrl: beerAdvUrl) { beerInfo in
+                    completion(beerInfo)
+                }
+            }
+        }
     }
     
     private func configureCamera() {
@@ -113,6 +195,7 @@ class ViewController: UIViewController, AVCapturePhotoCaptureDelegate {
             return
         }
         textObservations = textResults as! [VNTextObservation]
+        self.positionToLayerDict.removeAll()
         DispatchQueue.main.async {
             
             guard let sublayers = self.preView.layer.sublayers else {
@@ -142,72 +225,6 @@ class ViewController: UIViewController, AVCapturePhotoCaptureDelegate {
                     self.preView.layer.addSublayer(layer)
                     
                     self.positionToLayerDict[textResult.boundingBox] = layer
-                }
-            }
-        }
-    }
-    
-    
-    @IBAction func checkBeers(_ sender: Any) {
-//        var finalString = ""
-//        for text in beerTitles {
-//            finalString.append(text)
-//            finalString.append("\n")
-//        }
-        self.findBeerRatings() { response in
-            let myVC = self.storyboard?.instantiateViewController(withIdentifier: "BeerInfoTableViewController") as! BeerInfoTableViewController
-            myVC.allBeerInfoTupples = response
-            self.navigationController?.pushViewController(myVC, animated: true)
-        }
-        
-        
-    }
-    
-    private func findBeerRatings(completion: @escaping ([(String?, String?, String?)]) -> Void) {
-        var beerInfoTupples = [(String?, String?, String?)]()
-        for beerTitle in self.beerTitles {
-            self.findBeerRating(beerTitle: beerTitle) { response in
-                beerInfoTupples.append(response)
-                completion(beerInfoTupples)
-            }
-        }
-    }
-    
-    private func findBeerRating(beerTitle: String, completion: @escaping ((String?, String?, String?)) -> Void) {
-        let ws : WebScrapingService = WebScrapingService()
-        ws.scrapeGoogleSearch(beerPhraseToSearch: beerTitle) { response in
-            if let beerAdvUrl = response {
-                ws.scrapeBeerAdvocate(beerAdvUrl: beerAdvUrl) { beerInfo in
-                    //                        print(response)
-                    completion(beerInfo)
-                }
-            }
-        }
-    }
-    
-    @IBAction func selectBlocksOfText(_ sender: UIPanGestureRecognizer) {
-        sender.maximumNumberOfTouches = 1
-        var location : CGPoint
-        if sender.state == .began {
-            location = sender.location(in: self.preView!)
-            self.checkTapWithBoundBoxes(touch: location)
-        }
-        
-        if sender.state != .cancelled {
-            location = sender.location(in: preView!)
-            self.checkTapWithBoundBoxes(touch: location)
-        }
-        
-    }
-    
-    private func checkTapWithBoundBoxes(touch: CGPoint) {
-        let scaledLoc = CGPoint(x: 1 - (touch.x / self.preView.frame.size.width), y: 1 - (touch.y / self.preView.frame.size.height))
-        for (_, (text, boundBox)) in self.recognizedTextPositionTuples {
-            if (boundBox.contains(scaledLoc)) {
-                let corrLayer = self.positionToLayerDict[boundBox]
-                corrLayer?.borderColor = UIColor.blue.cgColor
-                if (!beerTitles.contains(text)) {
-                    beerTitles.append(text)
                 }
             }
         }
@@ -300,44 +317,10 @@ extension ViewController: AVCaptureVideoDataOutputSampleBufferDelegate {
                 let width = xMax - xMin
                 let height = yMax - yMin
                 newTextPositionTuples[CGRect(x: x, y: y, width: width, height: height)] = (text, textObservation.boundingBox)
-//                newTextPositionTuples.append((rect: CGRect(x: x, y: y, width: width, height: height), text: text))
             }
         }
         textObservations.removeAll()
-        DispatchQueue.main.async {
-            let viewWidth = self.view.frame.size.width
-            let viewHeight = self.view.frame.size.height
-            guard let sublayers = self.view.layer.sublayers else {
-                return
-            }
-            for layer in sublayers[1...] {
-                
-                if let _ = layer as? CATextLayer {
-                    layer.removeFromSuperlayer()
-                }
-            }
-            for (tupRect, (tupText, _)) in newTextPositionTuples {
-                let textLayer = CATextLayer()
-                textLayer.backgroundColor = UIColor.clear.cgColor
-                textLayer.font = self.font
-                var rect = tupRect
-
-                rect.origin.x *= viewWidth
-                rect.size.width *= viewWidth
-                rect.origin.y *= viewHeight
-                rect.size.height *= viewHeight
-
-                // Increase the size of text layer to show text of large lengths
-                rect.size.width += 100
-                rect.size.height += 100
-
-                textLayer.frame = rect
-                textLayer.string = tupText
-                textLayer.foregroundColor = UIColor.green.cgColor
-//                self.view.layer.addSublayer(textLayer)
-            }
-            self.recognizedTextPositionTuples = newTextPositionTuples
-        }
+        self.recognizedTextPositionTuples = newTextPositionTuples
     }
 }
 
