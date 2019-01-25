@@ -21,6 +21,7 @@ class ViewController: UIViewController, AVCapturePhotoCaptureDelegate {
     var positionToLayerDict : [CGRect : CALayer] = [:]
     private let session = AVCaptureSession()
     private var tesseract = G8Tesseract(language: "eng+deu+fr", engineMode: .tesseractOnly)
+    private var shouldRunTesseract = false
     
     var captureSession: AVCaptureSession?
     var capturePhotoOutput: AVCapturePhotoOutput?
@@ -46,6 +47,7 @@ class ViewController: UIViewController, AVCapturePhotoCaptureDelegate {
     }
     
     @IBAction func capture(_ sender: Any) {
+        shouldRunTesseract = true
         self.session.stopRunning()
         checkBeerButton.isEnabled = true
         refreshButton.isEnabled = true
@@ -54,10 +56,7 @@ class ViewController: UIViewController, AVCapturePhotoCaptureDelegate {
     
     
     @IBAction func refreshScreen(_ sender: Any) {
-        self.session.startRunning()
-        self.recognizedTextPositionTuples.removeAll()
-        self.beerTitles.removeAll()
-        self.positionToLayerDict.removeAll()
+        self.refreshSession()
     }
     
     
@@ -94,8 +93,17 @@ class ViewController: UIViewController, AVCapturePhotoCaptureDelegate {
         }
     }
     
+    private func refreshSession() {
+        self.session.startRunning()
+        self.recognizedTextPositionTuples.removeAll()
+        textObservations.removeAll()
+        self.beerTitles.removeAll()
+        self.positionToLayerDict.removeAll()
+        self.shouldRunTesseract = false
+    }
+    
     private func checkTapWithBoundBoxes(touch: CGPoint) {
-        let scaledLoc = CGPoint(x: 1 - (touch.x / self.preView.frame.size.width), y: 1 - (touch.y / self.preView.frame.size.height))
+        let scaledLoc = CGPoint(x: touch.x / self.preView.frame.size.width, y: 1 - (touch.y / self.preView.frame.size.height))
         for (_, (text, boundBox)) in self.recognizedTextPositionTuples {
             if (boundBox.contains(scaledLoc)) {
                 let corrLayer = self.positionToLayerDict[boundBox]
@@ -116,9 +124,11 @@ class ViewController: UIViewController, AVCapturePhotoCaptureDelegate {
         print(beerTitles)
         for beerTitle in self.beerTitles {
             wsDispatchGroup.enter()
-            self.findBeerRating(beerTitle: beerTitle) { response in
-                print(response.beerName ?? "N/A")
-                beerInfoTupples.append(response)
+            self.findBeerRating(beerTitle: beerTitle) { beerStats in
+                print(beerStats.beerName ?? "N/A")
+                if (!beerStats.isEmpty() && !beerStats.isBrewery()) {
+                    beerInfoTupples.append(beerStats)
+                }
                 wsDispatchGroup.leave()
             }
         }
@@ -220,7 +230,7 @@ class ViewController: UIViewController, AVCapturePhotoCaptureDelegate {
                     rect.size.width *= viewWidth
                     
                     layer.frame = rect
-                    layer.borderWidth = 2
+                    layer.borderWidth = 1
                     layer.borderColor = UIColor.red.cgColor
                     self.preView.layer.addSublayer(layer)
                     
@@ -262,6 +272,7 @@ extension UIImage {
 extension ViewController: AVCaptureVideoDataOutputSampleBufferDelegate {
     // MARK: - Camera Delegate and Setup
     func captureOutput(_ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {
+        
         guard let pixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer) else {
             return
         }
@@ -276,52 +287,55 @@ extension ViewController: AVCaptureVideoDataOutputSampleBufferDelegate {
         catch {
             print("Error occured \(error)")
         }
-        var ciImage = CIImage(cvPixelBuffer: pixelBuffer)
-        let transform = ciImage.orientationTransform(for: CGImagePropertyOrientation(rawValue: 6)!)
-        ciImage = ciImage.transformed(by: transform)
-        let size = ciImage.extent.size
-        
-        var newTextPositionTuples: [CGRect : (String, CGRect)] = [:]
-        for textObservation in textObservations {
+        if (shouldRunTesseract) {
+            var ciImage = CIImage(cvPixelBuffer: pixelBuffer)
+            let transform = ciImage.orientationTransform(for: CGImagePropertyOrientation(rawValue: 6)!)
+            ciImage = ciImage.transformed(by: transform)
+            let size = ciImage.extent.size
             
-            guard let rects = textObservation.characterBoxes else {
-                continue
-            }
-            
-            var xMin = CGFloat.greatestFiniteMagnitude
-            var xMax: CGFloat = 0
-            var yMin = CGFloat.greatestFiniteMagnitude
-            var yMax: CGFloat = 0
-            for rect in rects {
+            var newTextPositionTuples: [CGRect : (String, CGRect)] = [:]
+            for textObservation in textObservations {
                 
-                xMin = min(xMin, rect.bottomLeft.x)
-                xMax = max(xMax, rect.bottomRight.x)
-                yMin = min(yMin, rect.bottomRight.y)
-                yMax = max(yMax, rect.topRight.y)
+                guard let rects = textObservation.characterBoxes else {
+                    continue
+                }
+                
+                var xMin = CGFloat.greatestFiniteMagnitude
+                var xMax: CGFloat = 0
+                var yMin = CGFloat.greatestFiniteMagnitude
+                var yMax: CGFloat = 0
+                for rect in rects {
+                    
+                    xMin = min(xMin, rect.bottomLeft.x)
+                    xMax = max(xMax, rect.bottomRight.x)
+                    yMin = min(yMin, rect.bottomRight.y)
+                    yMax = max(yMax, rect.topRight.y)
+                }
+                let imageRect = CGRect(x: (xMin * size.width) - 5, y: (yMin * size.height) - 5, width: ((xMax - xMin) * size.width) + 10, height: ((yMax - yMin) * size.height) + 10)
+                let context = CIContext(options: nil)
+                guard let cgImage = context.createCGImage(ciImage, from: imageRect) else {
+                    continue
+                }
+                let uiImage = UIImage(cgImage: cgImage)
+                tesseract?.image = uiImage
+                tesseract?.recognize()
+                guard var text = tesseract?.recognizedText else {
+                    continue
+                }
+                text = text.trimmingCharacters(in: CharacterSet.newlines)
+                if !text.isEmpty {
+                    let x = xMin
+                    let y = 1 - yMax
+                    let width = xMax - xMin
+                    let height = yMax - yMin
+                    newTextPositionTuples[CGRect(x: x, y: y, width: width, height: height)] = (text, textObservation.boundingBox)
+                }
             }
-            let imageRect = CGRect(x: (xMin * size.width) - 5, y: (yMin * size.height) - 5, width: ((xMax - xMin) * size.width) + 10, height: ((yMax - yMin) * size.height) + 10)
-            let context = CIContext(options: nil)
-            guard let cgImage = context.createCGImage(ciImage, from: imageRect) else {
-                continue
-            }
-            let uiImage = UIImage(cgImage: cgImage)
-            tesseract?.image = uiImage
-            tesseract?.recognize()
-            guard var text = tesseract?.recognizedText else {
-                continue
-            }
-            text = text.trimmingCharacters(in: CharacterSet.newlines)
-            if !text.isEmpty {
-                let x = xMin
-                let y = 1 - yMax
-                let width = xMax - xMin
-                let height = yMax - yMin
-                newTextPositionTuples[CGRect(x: x, y: y, width: width, height: height)] = (text, textObservation.boundingBox)
-            }
+            self.recognizedTextPositionTuples = newTextPositionTuples
         }
         textObservations.removeAll()
-        self.recognizedTextPositionTuples = newTextPositionTuples
     }
+    
 }
 
 extension CGRect: Hashable {

@@ -13,18 +13,29 @@ import Alamofire
 class WebScrapingService {
     
     func scrapeGoogleSearch(beerPhraseToSearch: String, completion: @escaping (String?) -> Void) {
-        var queryString = beerPhraseToSearch + "+beer+advocate"
+        
+        let cleanedBeerName = cleanSearchString(searchString: beerPhraseToSearch)
+        print(cleanedBeerName)
+        var queryString = cleanedBeerName + "+beer+advocate"
         queryString = queryString.replacingOccurrences(of: " ", with: "+")
         queryString = queryString.replacingOccurrences(of: "%", with: "%25")
         let googleSearchUrl = "https://www.google.com/search?q=" + queryString + "&oq=" + queryString
-        print("Here 1")
+        
         AF.request(googleSearchUrl).responseString { response in
-            print("Here 2")
-            if let html = response.result.value {
-                print("Here 3")
-                let beerAdvUrl = self.pullBeerAdvPageFromSearch(html: html, htmlKey: "https://www.beeradvocate.com/beer/")
-                completion(beerAdvUrl)
+            switch response.result {
+                case .success(let html):
+                    let beerAdvUrl = self.pullBeerAdvPageFromSearch(html: html, htmlKey: "https://www.beeradvocate.com/beer/profile/")
+                    completion(beerAdvUrl)
+//                    print (val)
+                case .failure(let err):
+                    print (err)
+                    completion("")
             }
+//            if let html = response.result.value {
+////                print(html)
+//                let beerAdvUrl = self.pullBeerAdvPageFromSearch(html: html, htmlKey: "https://www.beeradvocate.com/beer/profile/")
+//                completion(beerAdvUrl)
+//            }
         }
     }
     
@@ -33,11 +44,11 @@ class WebScrapingService {
         var beerRating : String?
         var numBeerReviews : String?
         var beerAbv : String?
-        print("Here 5")
+        if (beerAdvUrl.isEmpty) {
+            completion(BeerStats(beerName: nil, rating: nil, numRatings: nil, abv: nil))
+        }
         AF.request(beerAdvUrl).responseString { response in
-            print("Here 6")
             if let html = response.result.value {
-                print("Here 7")
                 beerName = self.scrapeInfo(html: html, htmlKey: "<title>", htmlStopKey: " | Beer")
                 beerRating = self.scrapeInfo(html: html, htmlKey: "ba-ravg\">", htmlStopKey: "<")
                 numBeerReviews = self.scrapeInfo(html: html, htmlKey: "ba-ratings\">", htmlStopKey: "<")
@@ -62,7 +73,6 @@ class WebScrapingService {
     }
     
     private func pullBeerAdvPageFromSearch(html: String, htmlKey: String) -> String? {
-        print("Here 4")
         if let index = html.index(of: htmlKey) {
             let substring = html[index...]
             let stringUncut = String(substring)
@@ -72,6 +82,16 @@ class WebScrapingService {
             }
         }
         return nil
+    }
+    
+    private func cleanSearchString(searchString: String) -> String {
+        var cleanString = searchString
+        cleanString = cleanString.folding(options: .diacriticInsensitive, locale: .current)
+        let specialChars = [";", "/", "?", ":", "@", "=", "&", "+", "<", ">", "#", "%", "{", "}", "|", "\\", "^", "~", "[", "]", "`", "\'", "'", "‘"]
+        for char in specialChars {
+            cleanString = cleanString.replacingOccurrences(of: char, with: "")
+        }
+        return cleanString
     }
     
 }
@@ -105,4 +125,5 @@ extension StringProtocol where Index == String.Index {
         }
         return result
     }
+    
 }

@@ -22,6 +22,14 @@ class BeerStats {
         self.abv = abv
     }
     
+    func isEmpty() -> Bool {
+        return self.beerName == nil && self.rating == nil && self.numRatings == nil && self.abv == nil
+    }
+    
+    func isBrewery() -> Bool {
+        return self.abv == nil || self.abv == "N/A"
+    }
+    
 }
 
 extension String {
